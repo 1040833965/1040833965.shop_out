@@ -56,7 +56,7 @@ public class UserController {
 
 
         //调用邮箱发送的工具类完成验证码的发送，测试阶段网络不行暂时不用
-//        EmailUtil.sendEmail(javaMailSender,code,phone);
+        EmailUtil.sendEmail(javaMailSender,code,phone);
         log.info("验证码为： {}",code);
         //验证码存入session
         session.setAttribute(phone,code);

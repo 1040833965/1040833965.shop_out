@@ -5,12 +5,12 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
- * @author : 张金铭
+ * @author : 张金名
  * @description : 发送邮件工具类
  * @create :2022-10-08 11:07:00
  */
 public class EmailUtil {
-    private static final String FROM = "1040833965@qq.com";
+    private static final String FROM = "1040833965@qq.com.com";
     private final static String SUB = "验证码：";
 
 
