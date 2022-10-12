@@ -10,7 +10,7 @@ import org.springframework.mail.javamail.JavaMailSender;
  * @create :2022-10-08 11:07:00
  */
 public class EmailUtil {
-    private static final String FROM = "test@qq.com";
+    private static final String FROM = "1040833965@qq.com";
     private final static String SUB = "验证码：";
 
 
