@@ -7,8 +7,8 @@ spring:
 #发送邮箱配置
   mail:
     host: smtp.qq.com
-    username: 1040833965@qq.com
-    password: yhhflvyxngtibcdb
+    username: test@qq.com
+    password: xxx
 #    数据库数据源配置
   datasource:
     druid:
