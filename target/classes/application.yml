@@ -2,14 +2,20 @@ server:
   port: 8090
 spring:
   application:
-#    应用名称 可选择
+# 应用名称 可选择
     name: shop_take_out
+#redis配置
+  redis:
+    host: 192.168.23.133
+    port: 6379
+    password: 2002608
+    database: 2
 #发送邮箱配置
   mail:
     host: smtp.qq.com
     username: 1040833965@qq.com
     password: yhhflvyxngtibcdb
-#    数据库数据源配置
+# 数据库数据源配置
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
