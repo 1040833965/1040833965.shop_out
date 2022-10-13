@@ -3,6 +3,7 @@ package com.itzm.shop.controller;
 import ch.qos.logback.core.joran.util.beans.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.itzm.shop.common.DishStatic;
 import com.itzm.shop.common.JsonResult;
 import com.itzm.shop.dto.DishDto;
 import com.itzm.shop.entity.Category;
@@ -13,11 +14,14 @@ import com.itzm.shop.service.IDishService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +40,10 @@ public class DishController {
 
     @Resource
     private IDishFlavorService dishFlavorService;
+
+
+    @Resource
+    private RedisTemplate redisTemplate;
 
     /**
      * 分页查询和指定菜名
@@ -72,7 +80,17 @@ public class DishController {
     @PostMapping
     public JsonResult<String> save(@RequestBody DishDto dishDto){
 //        log.info("dishDto:{}",dishDto);
-        log.info("dishDto名字:{}",dishDto.getName());
+//        log.info("dishDto名字:{}",dishDto.getName());
+        //新增菜品后清理所有的菜品缓存
+//        Long categoryId = dishDto.getCategoryId();
+//        Set keys = redisTemplate.keys(DishStatic.CATEGORYkEY + "*");
+//        Long delete = redisTemplate.delete(keys);
+
+        //新增菜品后应该清除缓存中该菜品的分类数据的缓存
+        Long categoryId = dishDto.getCategoryId();
+        String key = DishStatic.CATEGORYkEY + categoryId + "_1";
+        redisTemplate.delete(key);
+
         dishService.saveWithFlavor(dishDto);
         return JsonResult.success("新增成功");
     }
@@ -84,6 +102,11 @@ public class DishController {
      */
     @PutMapping
     public JsonResult<String> update(@RequestBody DishDto dishDto){
+        //更新菜品后应该清除缓存中该菜品的分类数据的缓存
+        Long categoryId = dishDto.getCategoryId();
+        String key = DishStatic.CATEGORYkEY + categoryId + "_1";
+        redisTemplate.delete(key);
+
 
         dishService.updateWithFlavor(dishDto);
         return JsonResult.success("修改成功");
@@ -111,6 +134,7 @@ public class DishController {
             if (removeById==false){
                 return JsonResult.error("删除失败，请刷新页面重试");
             }
+
         return JsonResult.success("操作成功");
     }
 
@@ -124,6 +148,8 @@ public class DishController {
     public JsonResult<String> updateStatus(@PathVariable Integer status,Long[] ids){
 //        log.info("status的值,{}",status);
 //        log.info("id的值，{}",ids);
+        //修改状态，将停售的菜品分类的缓存清除
+
 
         if (dishService.updateStatus(status, ids)){
             return JsonResult.success("状态更新成功");
@@ -139,6 +165,18 @@ public class DishController {
     @GetMapping("/list")
     public JsonResult<List<DishDto>> getListById(Long categoryId){
 //        log.info("categoryId:{}",categoryId);
+        //事先构建返回
+        List<DishDto> dishDtoList = null;
+
+        //动态构造redis中的key
+        String key = DishStatic.CATEGORYkEY +categoryId+"_1";
+        //先从redis中获取缓存数据
+        dishDtoList = (List<DishDto>) redisTemplate.opsForValue().get(key);
+        //若存在，则直接返回缓存，无需查询数据库
+        if (dishDtoList!=null){
+            return JsonResult.success(dishDtoList);
+        }
+        //如果不存在，查询数据库，将菜品信息存到redis
 
         ArrayList<DishFlavor> dishFlavors = new ArrayList<>();
         //设置条件查询
@@ -149,7 +187,7 @@ public class DishController {
         if (dishList.size()==0){
             return JsonResult.success(null);
         }
-        List<DishDto> dishDtoList = dishList.stream().map(itms->{
+        dishDtoList = dishList.stream().map(itms->{
             DishDto dishDto = new DishDto();
             BeanUtils.copyProperties(itms,dishDto);
             Long dishId = itms.getId();
@@ -160,6 +198,8 @@ public class DishController {
             return dishDto;
         }).collect(Collectors.toList());
 //        log.info("dishDtoList: {}",dishDtoList);
+        //存入缓存,设置时间为30分钟固定清理一次
+        redisTemplate.opsForValue().set(key,dishDtoList,30, TimeUnit.MINUTES);
         return JsonResult.success(dishDtoList);
     }
 }

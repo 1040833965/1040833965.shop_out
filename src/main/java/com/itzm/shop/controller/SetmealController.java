@@ -2,6 +2,7 @@ package com.itzm.shop.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.itzm.shop.common.DishStatic;
 import com.itzm.shop.common.JsonResult;
 import com.itzm.shop.dto.DishDto;
 import com.itzm.shop.dto.SetmealDto;
@@ -13,10 +14,13 @@ import com.itzm.shop.service.ISetmealDishService;
 import com.itzm.shop.service.ISetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -38,6 +42,9 @@ public class SetmealController {
 
     @Resource
     private IDishService dishService;
+
+    @Resource
+    private RedisTemplate redisTemplate;
 
     /**
      * 保存新套餐
@@ -76,9 +83,22 @@ public class SetmealController {
     @GetMapping("/list")
     public JsonResult<List<Setmeal>> getSetmealDish(@RequestParam("categoryId") Long id,@RequestParam("status") Integer status){
 //        log.info("数据：{},   {}" ,id,status);
+        List<Setmeal> list = null;
+        //动态构造redis中的key
+        String key = DishStatic.CATEGORYkEY +id+"_1";
+        //先从redis中获取缓存数据
+        list = (List<Setmeal>) redisTemplate.opsForValue().get(key);
+        //若存在，则直接返回缓存，无需查询数据库
+        if (list!=null){
+            return JsonResult.success(list);
+        }
+
+        //不存在执行查询数据库操作
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Setmeal::getCategoryId,id).eq(Setmeal::getStatus,1);
-        List<Setmeal> list = setmealService.list(queryWrapper);
+        list = setmealService.list(queryWrapper);
+        //存入缓存,设置时间为30分钟固定清理一次
+        redisTemplate.opsForValue().set(key,list,30, TimeUnit.MINUTES);
         return JsonResult.success(list);
     }
 
@@ -95,7 +115,11 @@ public class SetmealController {
         return JsonResult.success(setMealByID);
     }
 
-
+    /**
+     * 更新套餐详情
+     * @param setmealDto
+     * @return
+     */
     @PutMapping
     public JsonResult<String> update(@RequestBody SetmealDto setmealDto){
 

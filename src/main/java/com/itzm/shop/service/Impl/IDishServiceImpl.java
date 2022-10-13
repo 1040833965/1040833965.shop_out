@@ -3,6 +3,7 @@ package com.itzm.shop.service.Impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.itzm.shop.common.DishStatic;
 import com.itzm.shop.dto.DishDto;
 import com.itzm.shop.entity.Category;
 import com.itzm.shop.entity.Dish;
@@ -11,12 +12,14 @@ import com.itzm.shop.entity.SetmealDish;
 import com.itzm.shop.mapper.DishMapper;
 import com.itzm.shop.service.*;
 import com.itzm.shop.service.ex.CustomException;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +38,9 @@ public class IDishServiceImpl extends ServiceImpl<DishMapper, Dish> implements I
 
     @Resource
     private ISetmealDishService setmealDishService;
+
+    @Resource
+    private RedisTemplate redisTemplate;
 
     /**
      * 新增菜品，保存口味数据
@@ -214,6 +220,11 @@ public class IDishServiceImpl extends ServiceImpl<DishMapper, Dish> implements I
             if (byId!=null){
                 byId.setStatus(status);
                 this.updateById(byId);
+                //获取到菜品分类cid
+                Long cid = byId.getCategoryId();
+                //根据cid查询缓存中的数据,删除缓存中的数据
+                Set keys = redisTemplate.keys(DishStatic.CATEGORYkEY + cid + "_1");
+                redisTemplate.delete(keys);
             }else {
                 return false;
             }

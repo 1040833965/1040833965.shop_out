@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.Validate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpRequest;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +22,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author : 张金铭
@@ -37,6 +39,9 @@ public class UserController {
 
     @Resource
     private JavaMailSender javaMailSender;
+
+    @Resource
+    private RedisTemplate redisTemplate;
 
 
     /**
@@ -59,12 +64,16 @@ public class UserController {
         EmailUtil.sendEmail(javaMailSender,code,phone);
         log.info("验证码为： {}",code);
         //验证码存入session
-        session.setAttribute(phone,code);
+//        session.setAttribute(phone,code);
+        //将验证码存入redis中,设置过期时间为5分钟
+        redisTemplate.opsForValue().set(phone,code,3, TimeUnit.MINUTES);
+
+
         return JsonResult.success("验证码发送成功，请注意接收");
     }
 
     @PostMapping("/login")
-    public JsonResult<User> login(@RequestBody Map map, HttpSession session){
+    public JsonResult<User> login(@RequestBody Map map,HttpSession session){
 //        log.info("map ，{}" ,map);
         //获取手机号
 
@@ -72,7 +81,9 @@ public class UserController {
         //获取验证码
         String code = map.get("code").toString();
         //从session中获取保存的验证码进行比对
-        Object codeInSession = session.getAttribute(phone);
+//        Object codeInSession = session.getAttribute(phone);
+        //从redis中获取验证码
+        Object codeInSession = redisTemplate.opsForValue().get(phone);
 
         if (!(codeInSession!=null&&codeInSession.equals(code))){
             //不一致，登入失败
@@ -95,6 +106,8 @@ public class UserController {
         User userOver = userService.getOne(queryWrapper);
         //将员工id存入Session并返回登录成功结果
         session.setAttribute("user",userOver.getId());
+        //用户登入成功，删除验证码
+        redisTemplate.delete(phone);
         return JsonResult.success(user);
     }
 }
