@@ -14,6 +14,8 @@ import com.itzm.shop.service.ISetmealDishService;
 import com.itzm.shop.service.ISetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -80,25 +82,32 @@ public class SetmealController {
     }
 
 
+    /**
+     * 查询套餐数据
+     * @param id
+     * @param status
+     * @return
+     */
     @GetMapping("/list")
+    @Cacheable(value = "setmealCache",key = "#id + '_' + #status")
     public JsonResult<List<Setmeal>> getSetmealDish(@RequestParam("categoryId") Long id,@RequestParam("status") Integer status){
 //        log.info("数据：{},   {}" ,id,status);
-        List<Setmeal> list = null;
+
         //动态构造redis中的key
         String key = DishStatic.CATEGORYkEY +id+"_1";
-        //先从redis中获取缓存数据
-        list = (List<Setmeal>) redisTemplate.opsForValue().get(key);
-        //若存在，则直接返回缓存，无需查询数据库
-        if (list!=null){
-            return JsonResult.success(list);
-        }
+//        //先从redis中获取缓存数据
+//        list = (List<Setmeal>) redisTemplate.opsForValue().get(key);
+//        //若存在，则直接返回缓存，无需查询数据库
+//        if (list!=null){
+//            return JsonResult.success(list);
+//        }
 
         //不存在执行查询数据库操作
         LambdaQueryWrapper<Setmeal> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Setmeal::getCategoryId,id).eq(Setmeal::getStatus,1);
-        list = setmealService.list(queryWrapper);
-        //存入缓存,设置时间为30分钟固定清理一次
-        redisTemplate.opsForValue().set(key,list,30, TimeUnit.MINUTES);
+        List<Setmeal> list  = setmealService.list(queryWrapper);
+//        //存入缓存,设置时间为30分钟固定清理一次
+//        redisTemplate.opsForValue().set(key,list,30, TimeUnit.MINUTES);
         return JsonResult.success(list);
     }
 
@@ -121,6 +130,7 @@ public class SetmealController {
      * @return
      */
     @PutMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public JsonResult<String> update(@RequestBody SetmealDto setmealDto){
 
         if (setmealService.updateWithDish(setmealDto)){
@@ -137,6 +147,7 @@ public class SetmealController {
      * @return
      */
     @PostMapping("/status/{status}")
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public JsonResult<String> updateStatus(@PathVariable Integer status,Long[] ids){
 //        log.info("status的值,{}",status);
 //        log.info("id的值，{}",ids);
@@ -153,6 +164,7 @@ public class SetmealController {
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public JsonResult<String> deleteById(Long[] ids){
         boolean removeById = setmealService.removeById(ids);
         if (removeById==false){
@@ -168,6 +180,7 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/dish/{id}")
+    @Cacheable(value = "setmealCacheDish" , key = "#id+'_dish'")
     public JsonResult<List<DishDto>> getSetmealDishDish(@PathVariable Long id){
 //        log.info("Dish id:  {}",id);
         //通过条件判断获取套餐中菜品

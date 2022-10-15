@@ -1,6 +1,8 @@
 package com.itzm.shop.common;
 
 import lombok.Data;
+
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,7 +12,7 @@ import java.util.Map;
  * @create :2022-09-23 09:23:00
  */
 @Data
-public class JsonResult<T> {
+public class JsonResult<T> implements Serializable {
     private Integer code;//编码，1成功，0和其他为失败
 
     private String msg;//返回的信息

@@ -10,7 +10,12 @@ spring:
     port: 6379
     password: 2002608
     database: 2
-#发送邮箱配置
+#Spring Cache配置
+  cache:
+    redis:
+      time-to-live:  1800000 #缓存有效期  1800s  30min  0.5h
+
+  #发送邮箱配置
   mail:
     host: smtp.qq.com
     username: 1040833965@qq.com
@@ -21,7 +26,7 @@ spring:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://localhost:3306/rj?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
       username: root
-      password:
+      password: root
 #        mybatis-plus配置
 mybatis-plus:
   configuration:
