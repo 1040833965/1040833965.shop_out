@@ -102,6 +102,7 @@ public class DishController {
      */
     @PutMapping
     public JsonResult<String> update(@RequestBody DishDto dishDto){
+        log.info("dishDto数据，{}",dishDto);
         //更新菜品后应该清除缓存中该菜品的分类数据的缓存
         Long categoryId = dishDto.getCategoryId();
         String key = DishStatic.CATEGORYkEY + categoryId + "_1";
