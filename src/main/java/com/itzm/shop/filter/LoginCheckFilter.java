@@ -45,7 +45,12 @@ public class LoginCheckFilter implements Filter {
             "/common/**",
                 //移动端登入和登出的请求
             "/user/sendMsg",//用户发送验证码请求
-            "/user/login"//用户登入请求
+            "/user/login",//用户登入请求
+                //knife4j 页面
+                "/doc.html",
+                "/webjars/**",
+                "/swagger-resources",
+                "/v2/api-docs"
         };
         //判断
         boolean check = check(urls, requestURI);
